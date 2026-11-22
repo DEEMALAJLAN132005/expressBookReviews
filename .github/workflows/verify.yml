@@ -1,0 +1,39 @@
+name: Verify Book Review API and Capture cURL Evidence
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: final_project
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run unit tests
+        run: npm test
+      - name: Start API and capture actual cURL output
+        run: |
+          npm start > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:5000/ > /dev/null; then break; fi
+            sleep 1
+          done
+          bash capture_evidence.sh DEEMALAJLAN132005
+      - name: Archive evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: book-review-curl-evidence
+          path: final_project/evidence/
